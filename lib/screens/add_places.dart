@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:favourite_places/widgets/location_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,26 +9,26 @@ class AddPlaceScreen extends ConsumerStatefulWidget {
   const AddPlaceScreen({super.key});
 
   @override
-  ConsumerState<AddPlaceScreen> createState() {
-    return _AddPlaceScreenState();
-  }
+  ConsumerState<AddPlaceScreen> createState() => _AddPlaceScreenState();
 }
 
 class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
   final _titleController = TextEditingController();
-  File? _selectedImage;
+  String? _selectedImageBase64;
   PlaceLocation? _selectedLocation;
 
   void _savePlace() {
     final enteredTitle = _titleController.text;
 
-    if (enteredTitle.isEmpty || _selectedImage == null || _selectedLocation == null) {
+    if (enteredTitle.isEmpty ||
+        _selectedImageBase64 == null ||
+        _selectedLocation == null) {
       return;
     }
 
     ref
         .read(userPlacesProvider.notifier)
-        .addPlace(enteredTitle, _selectedImage!, _selectedLocation!);
+        .addPlace(enteredTitle, _selectedImageBase64!, _selectedLocation!);
 
     Navigator.of(context).pop();
   }
@@ -52,20 +51,19 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
               decoration: const InputDecoration(labelText: 'Title'),
               controller: _titleController,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onBackground,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 10),
             ImageInput(
-              onPickImage: (image) {
-                _selectedImage = image;
+              onPickImage: (base64Image) {
+                _selectedImageBase64 = base64Image;
               },
             ),
             const SizedBox(height: 10),
             LocationInput(onSelectLocation: (location) {
               _selectedLocation = location;
-            }
-            ),
+            }),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _savePlace,

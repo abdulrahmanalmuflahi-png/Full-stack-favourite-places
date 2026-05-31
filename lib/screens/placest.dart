@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:favourite_places/screens/add_places.dart';
 import 'package:favourite_places/widgets/places_list.dart';
 import 'package:favourite_places/providers/user_places.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PlacesScreen extends ConsumerStatefulWidget {
   const PlacesScreen({super.key});
@@ -38,6 +39,12 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
               );
             },
           ),
+           IconButton(
+    icon: const Icon(Icons.logout),
+    onPressed: () async {
+      await FirebaseAuth.instance.signOut();
+    }
+           )
         ],
       ),
       body: Padding(

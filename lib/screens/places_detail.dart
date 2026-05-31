@@ -1,23 +1,14 @@
-
- 
-// import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:favourite_places/models/place.dart';
 import 'package:favourite_places/screens/map.dart';
-
-// import 'package:favourite_places/models/place.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class PlaceDetailScreen extends StatelessWidget {
   const PlaceDetailScreen({super.key, required this.place});
 
   final Place place;
-
-   String get locationImage {
-    final lat = place.location.latitude;
-    final lng = place.location.longitude;
-    return 'https://maps.googleapis.com/maps/api/staticmap?center=$lat,$lng&zoom=16&size=600x300&maptype=roadmap&markers=color:red%7Clabel:S%7C$lat,$lng&key=AIzaSyBT_T6pJ4EZzgNr7EZiakEf4uRUmet2W7s';
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +16,8 @@ class PlaceDetailScreen extends StatelessWidget {
       appBar: AppBar(title: Text(place.title)),
       body: Stack(
         children: [
-          Image.file(
-            place.image,
+          Image.memory(
+            base64Decode(place.imageBase64),
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
@@ -48,31 +39,67 @@ class PlaceDetailScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: CircleAvatar(
-                    radius: 70,
-                    backgroundImage: NetworkImage(locationImage),
+                  child: SizedBox(
+                    height: 140,
+                    width: 140,
+                    child: ClipOval(
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: LatLng(
+                            place.location.latitude,
+                            place.location.longitude,
+                          ),
+                          initialZoom: 16,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.none,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName:
+                                'com.example.favourite_places',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(
+                                  place.location.latitude,
+                                  place.location.longitude,
+                                ),
+                                child: const Icon(
+                                  Icons.location_pin,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 Container(
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
                   ),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.black54,
-                      ],
+                      colors: [Colors.transparent, Colors.black54],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
                   ),
                   child: Text(
-                    place.location.address!,
+                    place.location.address ?? '',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                 ),
               ],

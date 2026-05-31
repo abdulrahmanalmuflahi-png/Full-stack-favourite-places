@@ -1,43 +1,35 @@
-
 import 'dart:convert';
 import 'package:favourite_places/models/place.dart';
 import 'package:flutter/material.dart';
-import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:favourite_places/screens/map.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
+ 
 class LocationInput extends StatefulWidget {
   const LocationInput({super.key, required this.onSelectLocation});
-
+ 
   final Function(PlaceLocation) onSelectLocation;
-
+ 
   @override
-  State<LocationInput> createState() {
-    return _LocationInputState();
-  }
+  State<LocationInput> createState() => _LocationInputState();
 }
-
+ 
 class _LocationInputState extends State<LocationInput> {
   PlaceLocation? _pickedLocation;
   var _isGettingLocation = false;
-
-  String get locationImage {
-    if (_pickedLocation == null) {
-      return '';
-    }
-    final lat = _pickedLocation!.latitude;
-    final lng = _pickedLocation!.longitude;
-    return 'https://maps.googleapis.com/maps/api/staticmap?center=$lat,$lng&zoom=16&size=600x300&maptype=roadmap&markers=color:red%7Clabel:S%7C$lat,$lng&key=AIzaSyBT_T6pJ4EZzgNr7EZiakEf4uRUmet2W7s';
-  }
-
-  Future<void> _saveplace (double latitude, double longitude) async {
-     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=AIzaSyBT_T6pJ4EZzgNr7EZiakEf4uRUmet2W7s',
+ 
+  Future<void> _savePlace(double latitude, double longitude) async {
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?lat=$latitude&lon=$longitude&format=json',
     );
-    final response = await http.get(url);
+    final response = await http.get(url, headers: {
+      'User-Agent': 'FavouritePlacesApp/1.0',
+    });
     final resData = json.decode(response.body);
-    final address = resData['results'][0]['formatted_address'];
+    final address = resData['display_name'] as String;
+ 
     setState(() {
       _pickedLocation = PlaceLocation(
         latitude: latitude,
@@ -48,77 +40,86 @@ class _LocationInputState extends State<LocationInput> {
     });
     widget.onSelectLocation(_pickedLocation!);
   }
-
-  void _getCurrentLocation() async {
-    Location location = Location();
-
-    bool serviceEnabled;
-    PermissionStatus permissionGranted;
-    LocationData locationData;
-
-    serviceEnabled = await location.serviceEnabled();
+ 
+  Future<void> _getCurrentLocation() async {
+    // التحقق من الصلاحيات باستخدام geolocator
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) {
-        return;
-      }
-    }
-
-    permissionGranted = await location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    setState(() {
-      _isGettingLocation = true;
-    });
-
-    locationData = await location.getLocation();
-    final lat = locationData.latitude;
-    final lng = locationData.longitude;
-    if (lat == null || lng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location services are disabled.')),
+      );
       return;
     }
-   _saveplace(lat, lng);
+ 
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    if (permission == LocationPermission.deniedForever) return;
+ 
+    setState(() => _isGettingLocation = true);
+ 
+    final position = await Geolocator.getCurrentPosition();
+    _savePlace(position.latitude, position.longitude);
   }
-
+ 
   void _selectOnMap() async {
-    final pickedLocation = await Navigator.of(
-      context,
-    ).push<LatLng>(MaterialPageRoute(builder: (ctx) => MapScreen()
-    )
+    final pickedLocation = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(builder: (ctx) => const MapScreen()),
     );
-    if (pickedLocation == null) {
-      return;
-    }
-    _saveplace(pickedLocation.latitude, pickedLocation.longitude);
+    if (pickedLocation == null) return;
+    _savePlace(pickedLocation.latitude, pickedLocation.longitude);
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     Widget previewContent = Text(
       'No Location Chosen',
       textAlign: TextAlign.center,
       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-      ),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
     );
-    if (_pickedLocation != null) {
-      previewContent = Image.network(
-        locationImage,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-      );
-    }
-
+ 
     if (_isGettingLocation) {
       previewContent = const CircularProgressIndicator();
+    } else if (_pickedLocation != null) {
+      previewContent = FlutterMap(
+        options: MapOptions(
+          initialCenter: LatLng(
+            _pickedLocation!.latitude,
+            _pickedLocation!.longitude,
+          ),
+          initialZoom: 16,
+          interactionOptions: const InteractionOptions(
+            flags: InteractiveFlag.none,
+          ),
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.example.favourite_places',
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: LatLng(
+                  _pickedLocation!.latitude,
+                  _pickedLocation!.longitude,
+                ),
+                child: const Icon(
+                  Icons.location_pin,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
     }
-
+ 
     return Column(
       children: [
         Container(
@@ -128,14 +129,11 @@ class _LocationInputState extends State<LocationInput> {
           decoration: BoxDecoration(
             border: Border.all(
               width: 1,
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.2),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
             ),
           ),
           child: previewContent,
         ),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [

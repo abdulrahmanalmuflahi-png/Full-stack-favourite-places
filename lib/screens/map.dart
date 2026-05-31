@@ -1,10 +1,9 @@
 
-
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:favourite_places/models/place.dart';
-import 'package:favourite_places/screens/places_detail.dart';
-
+ 
 class MapScreen extends StatefulWidget {
   const MapScreen({
     super.key,
@@ -13,21 +12,21 @@ class MapScreen extends StatefulWidget {
       longitude: -122.084,
       address: '',
     ),
-    this.isSelecting = true, // 1. إضافة المتغير إلى Constructor
+    this.isSelecting = true,
   });
-
+ 
   final PlaceLocation location;
-  final bool isSelecting; // 2. تعريف المتغير كـ Property
-
+  final bool isSelecting;
+ 
   @override
   State<StatefulWidget> createState() {
     return _MapScreenState();
   }
 }
-
+ 
 class _MapScreenState extends State<MapScreen> {
   LatLng? _pickedLocation;
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,33 +40,48 @@ class _MapScreenState extends State<MapScreen> {
               icon: const Icon(Icons.save),
               onPressed: () {
                 Navigator.of(context).pop(_pickedLocation);
-                // Handle location selection
               },
             ),
         ],
       ),
-      body: GoogleMap(
-        onTap: !widget.isSelecting ? null :// 3. استخدام المتغير لتحديد ما إذا كان المستخدم يمكنه اختيار الموقع أم لا
-         (position) {
-          setState(() {
-            _pickedLocation = position;
-          });
-        },
-        initialCameraPosition: CameraPosition(
-          target: LatLng(widget.location.latitude, widget.location.longitude),
-          zoom: 16,
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter: LatLng(
+            widget.location.latitude,
+            widget.location.longitude,
+          ),
+          initialZoom: 16,
+          onTap: !widget.isSelecting
+              ? null
+              : (tapPosition, point) {
+                  setState(() {
+                    _pickedLocation = point;
+                  });
+                },
         ),
-        markers: (_pickedLocation == null && widget.isSelecting)? {}: {
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.example.favourite_places',
+          ),
+          if (_pickedLocation != null || !widget.isSelecting)
+            MarkerLayer(
+              markers: [
                 Marker(
-                  markerId: const MarkerId('m1'),
-                  position:
-                      _pickedLocation ??
+                  point: _pickedLocation ??
                       LatLng(
                         widget.location.latitude,
                         widget.location.longitude,
                       ),
+                  child: const Icon(
+                    Icons.location_pin,
+                    color: Colors.red,
+                    size: 40,
+                  ),
                 ),
-              },
+              ],
+            ),
+        ],
       ),
     );
   }
