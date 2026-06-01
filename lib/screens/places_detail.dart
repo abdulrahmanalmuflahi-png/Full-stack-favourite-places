@@ -4,12 +4,12 @@ import 'package:favourite_places/models/place.dart';
 import 'package:favourite_places/screens/map.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
- 
+
 class PlaceDetailScreen extends StatelessWidget {
   const PlaceDetailScreen({super.key, required this.place});
- 
+
   final Place place;
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,42 +43,40 @@ class PlaceDetailScreen extends StatelessWidget {
                     height: 140,
                     width: 140,
                     child: ClipOval(
-                      child: AbsorbPointer(
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialCenter: LatLng(
-                              place.location.latitude,
-                              place.location.longitude,
-                            ),
-                            initialZoom: 16,
-                            interactionOptions: const InteractionOptions(
-                              flags: InteractiveFlag.none,
-                            ),
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: LatLng(
+                            place.location.latitude,
+                            place.location.longitude,
                           ),
-                          children: [
-                            TileLayer(
-                              urlTemplate:
-                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName:
-                                  'com.example.favourite_places',
-                            ),
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: LatLng(
-                                    place.location.latitude,
-                                    place.location.longitude,
-                                  ),
-                                  child: const Icon(
-                                    Icons.location_pin,
-                                    color: Colors.red,
-                                    size: 40,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          initialZoom: 16,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.none,
+                          ),
                         ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName:
+                                'com.example.favourite_places',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(
+                                  place.location.latitude,
+                                  place.location.longitude,
+                                ),
+                                child: const Icon(
+                                  Icons.location_pin,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -112,4 +110,4 @@ class PlaceDetailScreen extends StatelessWidget {
     );
   }
 }
- //تحذث
+//يعتمد
